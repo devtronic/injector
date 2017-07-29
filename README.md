@@ -1,5 +1,5 @@
 [![Travis](https://img.shields.io/travis/Devtronic/injector.svg)](https://travis-ci.org/Devtronic/injector)
-[![Packagist](https://img.shields.io/packagist/v/devtronic/injector.svg)](https://packagist.org/packages/devtronic/injector)
+[![Packagist](https://img.shields.io/packagist/v/Devtronic/injector.svg)](https://packagist.org/packages/devtronic/injector)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/Devtronic/injector/master/LICENSE)
 [![Packagist](https://img.shields.io/packagist/dt/devtronic/injector.svg)](https://packagist.org/packages/devtronic/injector)
 
