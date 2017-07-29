@@ -135,4 +135,35 @@ class ServiceContainerTest extends TestCase
             'my_object' => (object)['name' => 'Baz'],
         ], $serviceContainer->getLoadedServices());
     }
+
+    public function testLoadServiceWithFQCNFails()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->registerService('app.my_car', 'Vendor\\Car', [244, 'red']);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Service Vendor\\Car not found');
+        $serviceContainer->loadService('app.my_car');
+    }
+
+    public function testLoadServiceUnknownTypeFails()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->registerService('app.my_car', [], [244, 'red']);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The service must be an instance of string, callable, array given.');
+        $serviceContainer->loadService('app.my_car');
+    }
+
+    public function testLoadServiceWithFQCN()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->registerService('app.my_car', TestClass::class, [244, 'red']);
+
+        $myCar = $serviceContainer->loadService('app.my_car');
+        $this->assertTrue($myCar instanceof TestClass);
+        $this->assertSame(244, $myCar->maxSpeed);
+        $this->assertSame('red', $myCar->color);
+    }
 }

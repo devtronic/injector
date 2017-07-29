@@ -60,6 +60,8 @@ class ServiceContainer
      * @return mixed The load result
      *
      * @throws ServiceNotFoundException If the service is not registered
+     * @throws \Exception If the service class is not found
+     * @throws \LogicException If the service is no instance of string or callable
      * @throws \InvalidArgumentException If the dependency count does not match the argument count of the service
      */
     public function loadService($name)
@@ -72,7 +74,19 @@ class ServiceContainer
             return $this->loadedServices[$name];
         }
 
-        $reflection = new \ReflectionFunction($this->services[$name]['service']);
+        $service = $this->services[$name]['service'];
+        $reflection = null;
+        if (is_string($service) && class_exists($service)) {
+            $reflectionClass = new \ReflectionClass($service);
+            $reflection = $reflectionClass->getConstructor();
+        } elseif (is_callable($service)) {
+            $reflection = new \ReflectionFunction($service);
+        } elseif (is_string($service) && !class_exists($service)) {
+            throw new \Exception("Service {$service} not found");
+        } else {
+            $format = 'The service must be an instance of string, callable, %s given.';
+            throw new \LogicException(sprintf($format, gettype($service)));
+        }
 
         $injections = $this->services[$name]['arguments'];
         $parameters = [];
@@ -92,7 +106,13 @@ class ServiceContainer
             throw new \InvalidArgumentException("The Service {$name} expects exact {$numExpected} arguments, {$numGiven} given");
         }
 
-        $loadedService = call_user_func_array($this->services[$name]['service'], $parameters);
+        $loadedService = null;
+        if (is_string($service) && class_exists($service)) {
+            $reflectionClass = new \ReflectionClass($service);
+            $loadedService = $reflectionClass->newInstanceArgs($parameters);
+        } elseif (is_callable($service)) {
+            $loadedService = call_user_func_array($service, $parameters);
+        }
         $this->loadedServices[$name] = &$loadedService;
         return $loadedService;
     }

@@ -68,6 +68,38 @@ $serviceContainer->registerService('app.my_service', function (array $anotherSer
 }, ['@app.another_service']);
 ```
 
+#### Register a class as a service
+You can also register a class as a service. If the service is loaded, the constructor gets called with the dependencies.
+
+```php
+<?php
+
+use Devtronic\Injector\ServiceContainer;
+
+$serviceContainer = new ServiceContainer();
+
+class Car
+{
+    /** @var int */
+    public $maxSpeed = 0;
+
+    /** @var string */
+    public $color = '';
+
+    public function __construct($maxSpeed, $color)
+    {
+        $this->maxSpeed = $maxSpeed;
+        $this->color = $color;
+    }
+}
+
+$serviceContainer->registerService('app.my_car', Car::class, [250, 'red']);
+
+$myCar = $serviceContainer->loadService('app.my_car');
+echo "My Car: Speed: {$myCar->maxSpeed}, Color: {$myCar->color}"; // My Car: Speed: 250, Color: red
+
+```
+
 ### Load a service
 To load a service you have to call the `loadService`-Method.  
 Once a service is loaded, it remains in memory at runtime.
