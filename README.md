@@ -17,14 +17,14 @@ $ composer require devtronic/injector
 ## Usage
 
 ### Register Services
-To register a service you have to call the `registerService`-Method.  
+To register a service you have to call the `registerService`-method.  
 ```
 ServiceContainer::registerService($name, $service, $arguments = [])
 ```
 |  Parameter | Description                                                                    | Example              |
 |:-----------|:-------------------------------------------------------------------------------|:---------------------|
 | name       | The unique name of the service.                                                | app.my_service       |
-| service    | The service callable.                                                          | `function($arg1) {}`  |
+| service    | The service callable.                                                          | `function($arg1) {}` |
 | arguments  | The arguments for the service. Entries with @-prefix are service references    | `['@app.foo', 1]`    |
 
 #### Register a service with static arguments
@@ -101,16 +101,16 @@ echo "My Car: Speed: {$myCar->maxSpeed}, Color: {$myCar->color}"; // My Car: Spe
 ```
 
 ### Load a service
-To load a service you have to call the `loadService`-Method.  
+To load a service you have to call the `loadService`-method.  
 Once a service is loaded, it remains in memory at runtime.
 When the same service is loaded again, the first instance is returned.
 
 ```
 ServiceContainer::loadService($name)
 ```
-|  Parameter | Description                | Example        |
-|:-----------|:---------------------------|:---------------|
-| name       | The unique of the service. | app.my_service |
+|  Parameter | Description                     | Example        |
+|:-----------|:--------------------------------|:---------------|
+| name       | The unique name of the service. | app.my_service |
 
 ```php
 <?php
@@ -131,6 +131,30 @@ $serviceContainer->registerService('app.my_service', function (array $anotherSer
 }, ['@app.another_service']);
 
 echo $serviceContainer->loadService('app.my_service'); // Name: injector, developer: Julian
+```
+
+### Add Parameters
+The service container also supports static parameters.  
+You can add a parameter using the `addParameter`-method
+```
+ServiceContainer::addParameter($name)
+```
+|  Parameter | Description                       | Example        |
+|:-----------|:----------------------------------|:---------------|
+| name       | The unique name of the parameter. | database.host  |
+
+To pass a parameter to a service, add before and after the name a '%':  `%name.of.the.parameter%`
+```php
+<?php
+
+use Devtronic\Injector\ServiceContainer;
+
+$serviceContainer = new ServiceContainer();
+
+$serviceContainer->addParameter('database.host', 'localhost');
+$serviceContainer->registerService('my.service', function ($hostname) {
+    return 'Connecting to ' . $hostname;
+}, ['%database.host%']);
 ```
 
 ## Testing
