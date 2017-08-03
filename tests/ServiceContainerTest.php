@@ -2,7 +2,7 @@
 /**
  * This file is part of the Devtronic Injector package.
  *
- * Copyright {year} by Julian Finkler <julian@developer-heaven.de>
+ * Copyright 2017 by Julian Finkler <julian@developer-heaven.de>
  *
  * For the full copyright and license information, please read the LICENSE
  * file that was distributed with this source code.
@@ -10,6 +10,7 @@
 
 namespace Devtronic\Tests\Injector;
 
+use Devtronic\Injector\Exception\ParameterNotDefinedException;
 use Devtronic\Injector\Exception\ServiceNotFoundException;
 use Devtronic\Injector\ServiceContainer;
 use PHPUnit\Framework\TestCase;
@@ -165,5 +166,82 @@ class ServiceContainerTest extends TestCase
         $this->assertTrue($myCar instanceof TestClass);
         $this->assertSame(244, $myCar->maxSpeed);
         $this->assertSame('red', $myCar->color);
+    }
+
+    public function testAddParameterFailsNoStringName()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The name must be a string');
+
+        $serviceContainer = new ServiceContainer();
+
+        /** @noinspection PhpParamsInspection */
+        $serviceContainer->addParameter([], []);
+    }
+
+    public function testAddParameterFailsAlreadyDefined()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->addParameter('foobar', 'baz');
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The parameter foobar is already defined');
+
+        $serviceContainer->addParameter('foobar', []);
+    }
+
+    public function testAddParameter()
+    {
+        $serviceContainer = new ServiceContainer();
+        $this->assertSame([], $serviceContainer->getParameters());
+        $serviceContainer->addParameter('foobar', 'baz');
+        $this->assertSame(['foobar' => 'baz'], $serviceContainer->getParameters());
+    }
+
+    public function testHasService()
+    {
+        $serviceContainer = new ServiceContainer();
+        $this->assertFalse($serviceContainer->hasParameter('foobar'));
+        $serviceContainer->addParameter('foobar', 'baz');
+        $this->assertTrue($serviceContainer->hasParameter('foobar'));
+    }
+
+    public function testGetParameterFails()
+    {
+        $this->expectException(ParameterNotDefinedException::class);
+        $this->expectExceptionMessage('A parameter with the name foobar is not defined');
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->getParameter('foobar');
+    }
+
+    public function testGetParameter()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->addParameter('foobar', 'baz');
+        $this->assertEquals('baz', $serviceContainer->getParameter('foobar'));
+    }
+
+    public function testLoadServiceWithParameter()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->addParameter('database.host', 'my.server.tld');
+        $serviceContainer->registerService('db.ctx', function ($host) {
+            return 'Connecting to ' . $host;
+        }, ['%database.host%']);
+
+        $this->assertEquals('Connecting to my.server.tld', $serviceContainer->loadService('db.ctx'));
+    }
+
+    public function testLoadServiceWithParameterFails()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->registerService('app.foo', function ($db) {
+            return $db;
+        }, ['%foobar%']);
+
+
+        $this->expectException(ParameterNotDefinedException::class);
+        $this->expectExceptionMessage('A parameter with the name foobar is not defined');
+        $serviceContainer->loadService('app.foo');
     }
 }
