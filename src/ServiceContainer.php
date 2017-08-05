@@ -60,6 +60,24 @@ class ServiceContainer
     }
 
     /**
+     * Unregister a service from the container
+     * @param string $name The name of the service
+     *
+     * @throws ServiceNotFoundException If the service is not registered
+     * @throws \LogicException If the service is already loaded
+     */
+    public function unregisterService($name)
+    {
+        if (!isset($this->services[$name])) {
+            throw new ServiceNotFoundException("A service with the name {$name} does not exist");
+        } elseif (isset($this->loadedServices[$name])) {
+            throw new \LogicException("The service {$name} can not be unregistered because its already loaded");
+        }
+
+        unset($this->services[$name]);
+    }
+
+    /**
      * Loads a service and returns the result
      * Dependencies are also loaded
      *
@@ -128,26 +146,6 @@ class ServiceContainer
     }
 
     /**
-     * Adds a new Parameter to the service container
-     *
-     * @param string $name The parameter name
-     * @param mixed $value The parameter value
-     *
-     * @throws \InvalidArgumentException If the name is not a string
-     * @throws \LogicException If the parameter is already defined
-     */
-    public function addParameter($name, $value)
-    {
-        if (!is_string($name)) {
-            throw new \InvalidArgumentException('The name must be a string');
-        } elseif (isset($this->parameters[$name])) {
-            throw new \LogicException("The parameter {$name} is already defined");
-        }
-
-        $this->parameters[$name] = $value;
-    }
-
-    /**
      * Returns all registered services
      *
      * @return array The registered Services
@@ -175,6 +173,59 @@ class ServiceContainer
     public function getParameters()
     {
         return $this->parameters;
+    }
+
+    /**
+     * Adds a new Parameter to the service container
+     *
+     * @param string $name The parameter name
+     * @param mixed $value The parameter value
+     *
+     * @throws \InvalidArgumentException If the name is not a string
+     */
+    public function addParameter($name, $value)
+    {
+        $this->setParameter($name, $value, false);
+    }
+
+    /**
+     * Sets a parameter
+     *
+     * @param string $name The parameter name
+     * @param mixed $value The parameter value
+     * @param boolean $override If true, the parameter will be overwritten if it's already setted
+     *
+     * @throws \InvalidArgumentException If the name is not a string
+     * @throws \LogicException If the parameter is already defined and override = false
+     */
+    public function setParameter($name, $value, $override = true)
+    {
+        if (!is_string($name)) {
+            throw new \InvalidArgumentException('The name must be a string');
+        } elseif (isset($this->parameters[$name]) && $override !== true) {
+            throw new \LogicException("The parameter {$name} is already defined");
+        }
+
+        $this->parameters[$name] = $value;
+    }
+
+    /**
+     * Unsets a parameter
+     *
+     * @param $name
+     *
+     * @throws \InvalidArgumentException If the name is not a string
+     * @throws ParameterNotDefinedException If the parameter is not defined
+     */
+    public function unsetParameter($name)
+    {
+        if (!is_string($name)) {
+            throw new \InvalidArgumentException('The name must be a string');
+        } elseif (!$this->hasParameter($name)) {
+            throw new ParameterNotDefinedException("A parameter with the name {$name} is not defined");
+        }
+
+        unset($this->parameters[$name]);
     }
 
     /**

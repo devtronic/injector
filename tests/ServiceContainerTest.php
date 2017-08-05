@@ -54,6 +54,45 @@ class ServiceContainerTest extends TestCase
         $this->assertSame($expected, $serviceContainer->getRegisteredServices());
     }
 
+    public function testUnregisterServiceFailsMissing()
+    {
+        $serviceContainer = new ServiceContainer();
+
+        $this->expectException(ServiceNotFoundException::class);
+        $this->expectExceptionMessage('A service with the name foobar does not exist');
+        $serviceContainer->unregisterService('foobar');
+    }
+
+    public function testUnregisterServiceFailsAlreadyLoaded()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->registerService('foobar', function () {
+            return 'baz';
+        });
+        $serviceContainer->loadService('foobar');
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The service foobar can not be unregistered because its already loaded');
+        $serviceContainer->unregisterService('foobar');
+    }
+
+    public function testUnregisterService()
+    {
+        $serviceContainer = new ServiceContainer();
+        $this->assertEquals([], $serviceContainer->getRegisteredServices());
+        $this->assertEquals([], $serviceContainer->getLoadedServices());
+        $serviceContainer->registerService('foobar', function () {
+            return 'baz';
+        });
+
+        $this->assertCount(1, $serviceContainer->getRegisteredServices());
+        $this->assertCount(0, $serviceContainer->getLoadedServices());
+
+        $serviceContainer->unregisterService('foobar');
+        $this->assertCount(0, $serviceContainer->getRegisteredServices());
+        $this->assertCount(0, $serviceContainer->getLoadedServices());
+    }
+
     public function testLoadServiceFails()
     {
         $serviceContainer = new ServiceContainer();
@@ -196,6 +235,72 @@ class ServiceContainerTest extends TestCase
         $this->assertSame([], $serviceContainer->getParameters());
         $serviceContainer->addParameter('foobar', 'baz');
         $this->assertSame(['foobar' => 'baz'], $serviceContainer->getParameters());
+    }
+
+    public function testSetParameterFailsNoStringName()
+    {
+        $serviceContainer = new ServiceContainer();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The name must be a string');
+
+        /** @noinspection PhpParamsInspection */
+        $serviceContainer->setParameter([], []);
+    }
+
+    public function testSetParameterFailsAlreadyDefined()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->setParameter('foobar', 'baz');
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The parameter foobar is already defined');
+
+        $serviceContainer->setParameter('foobar', [], false);
+    }
+
+    public function testSetParameter()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->setParameter('foobar', 'baz');
+        $this->assertEquals('baz', $serviceContainer->getParameter('foobar'));
+    }
+
+    public function testSetParameterOverride()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->setParameter('foobar', 'baz');
+        $this->assertEquals('baz', $serviceContainer->getParameter('foobar'));
+        $serviceContainer->setParameter('foobar', []);
+        $this->assertEquals([], $serviceContainer->getParameter('foobar'));
+    }
+
+    public function testUnsetParameterFailsNotExist()
+    {
+        $serviceContainer = new ServiceContainer();
+        $this->assertCount(0, $serviceContainer->getParameters());
+
+        $this->expectException(ParameterNotDefinedException::class);
+        $this->expectExceptionMessage('A parameter with the name foobar is not defined');
+        $serviceContainer->unsetParameter('foobar');
+    }
+
+    public function testUnsetParameterFailsNoStringName()
+    {
+        $serviceContainer = new ServiceContainer();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The name must be a string');
+        $serviceContainer->unsetParameter([]);
+    }
+
+    public function testUnsetParameter()
+    {
+        $serviceContainer = new ServiceContainer();
+        $this->assertCount(0, $serviceContainer->getParameters());
+        $serviceContainer->addParameter('foobar', 'asd');
+        $serviceContainer->setParameter('foobar', 'baz');
+        $this->assertCount(1, $serviceContainer->getParameters());
+        $serviceContainer->unsetParameter('foobar');
+        $this->assertCount(0, $serviceContainer->getParameters());
     }
 
     public function testHasService()
