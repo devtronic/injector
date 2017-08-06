@@ -125,6 +125,18 @@ class ServiceContainerTest extends TestCase
         $serviceContainer->loadService('message');
     }
 
+    public function testLoadServiceWithOptionalDependencyFails()
+    {
+        $serviceContainer = new ServiceContainer();
+
+        $serviceContainer->registerService('message', function ($dependency = false) {
+        }, ['one', 'two']);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The Service message expects min. 0 and max. 1 arguments, 2 given');
+        $serviceContainer->loadService('message');
+    }
+
     public function testLoadServiceWithStaticDependency()
     {
         $serviceContainer = new ServiceContainer();
