@@ -131,7 +131,7 @@ class ServiceContainer
                 $parameter = $injection;
                 if (is_string($injection) && substr($injection, 0, 1) == '@') {
                     $parameter = $this->loadService(substr($injection, 1));
-                } elseif (preg_match('~^%(.*?)%$~', $injection, $match) > 0) {
+                } elseif (is_string($injection) && preg_match('~^%(.*?)%$~', $injection, $match) > 0) {
                     $parameter = $this->getParameter($match[1]);
                 }
                 $parameters[] = $parameter;

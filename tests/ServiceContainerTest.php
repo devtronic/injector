@@ -164,6 +164,18 @@ class ServiceContainerTest extends TestCase
         $this->assertSame('Hello, I am a dependency', $message);
     }
 
+    public function testLoadServiceWithStaticDependencyArray()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->registerService('messages', function ($arrMessages, $delimiter = ';') {
+            return implode($delimiter, $arrMessages);
+        }, [['Hello', 'World'], ', ']);
+
+        $message = $serviceContainer->loadService('messages');
+
+        $this->assertSame('Hello, World', $message);
+    }
+
     public function testLoadAlreadyLoadedService()
     {
         $serviceContainer = new ServiceContainer();
