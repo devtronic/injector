@@ -200,6 +200,17 @@ class ServiceContainerTest extends TestCase
         ], $serviceContainer->getLoadedServices());
     }
 
+    public function testLoadServiceWithFQCNMissingConstructor()
+    {
+        $serviceContainer = new ServiceContainer();
+
+        $serviceContainer->registerService('app.no_constructor', TestClassEmpty::class, []);
+
+        $loaded = $serviceContainer->loadService('app.no_constructor');
+
+        $this->assertTrue($loaded instanceof TestClassEmpty);
+    }
+
     public function testLoadServiceWithFQCNFails()
     {
         $serviceContainer = new ServiceContainer();

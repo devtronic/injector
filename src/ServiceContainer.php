@@ -105,6 +105,10 @@ class ServiceContainer
         if (is_string($service) && class_exists($service)) {
             $reflectionClass = new \ReflectionClass($service);
             $reflection = $reflectionClass->getConstructor();
+            if ($reflection === null) {
+                $reflection = new \ReflectionFunction(function () {
+                });
+            }
         } elseif (is_callable($service)) {
             $reflection = new \ReflectionFunction($service);
         } elseif (is_string($service) && !class_exists($service)) {
