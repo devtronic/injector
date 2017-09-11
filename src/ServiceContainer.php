@@ -135,8 +135,12 @@ class ServiceContainer
                 $parameter = $injection;
                 if (is_string($injection) && substr($injection, 0, 1) == '@') {
                     $parameter = $this->loadService(substr($injection, 1));
-                } elseif (is_string($injection) && preg_match('~^%(.*?)%$~', $injection, $match) > 0) {
-                    $parameter = $this->getParameter($match[1]);
+                } elseif (is_string($injection) && preg_match_all('~%(.*?)%~', $injection, $matches) > 0) {
+                    foreach ($matches[0] as $mKey => $match) {
+                        $parameter = str_replace($match, $this->getParameter($matches[1][$mKey]), $parameter);
+                    }
+                } elseif (is_array($parameter)) {
+                    $parameter = $this->replaceNestedParameters($parameter);
                 }
                 $parameters[] = $parameter;
             }
@@ -156,7 +160,36 @@ class ServiceContainer
             $loadedService = call_user_func_array($service, $parameters);
         }
         $this->loadedServices[$name] = &$loadedService;
+
         return $loadedService;
+    }
+
+    /**
+     * Replaces Nested Parameter Dependencies
+     * For Example
+     * myDependency = [
+     *      subEntry = '%my.app.parameter',
+     *      other = [
+     *          subSub = '%my.app.deep_parameter%'
+     *      ]
+     * ]
+     *
+     * @param array $array The dependency array
+     * @return array The dependency array with the replaced parameters
+     */
+    public function replaceNestedParameters(array $array)
+    {
+        foreach ($array as $key => $value) {
+            if (is_array($value)) {
+                $array[$key] = $this->replaceNestedParameters($value);
+            } elseif (is_string($value) && preg_match_all('~%(.*?)%~', $value, $matches) > 0) {
+                foreach ($matches[0] as $mKey => $mValue) {
+                    $value = str_replace($mValue, $this->getParameter($matches[1][$mKey]), $value);
+                }
+                $array[$key] = $value;
+            }
+        }
+        return $array;
     }
 
     /**

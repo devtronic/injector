@@ -365,11 +365,25 @@ class ServiceContainerTest extends TestCase
     {
         $serviceContainer = new ServiceContainer();
         $serviceContainer->addParameter('database.host', 'my.server.tld');
-        $serviceContainer->registerService('db.ctx', function ($host) {
-            return 'Connecting to ' . $host;
-        }, ['%database.host%']);
+        $serviceContainer->addParameter('database.port', '1337');
+        $serviceContainer->registerService('db.ctx', function ($server) {
+            return 'Connecting to ' . $server;
+        }, ['%database.host%:%database.port%']);
 
-        $this->assertEquals('Connecting to my.server.tld', $serviceContainer->loadService('db.ctx'));
+        $this->assertEquals('Connecting to my.server.tld:1337', $serviceContainer->loadService('db.ctx'));
+    }
+
+    public function testLoadServiceWithNestedParameter()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->addParameter('database.host', 'my.server.tld');
+        $serviceContainer->addParameter('proxy.host', 'my.proxy.tld');
+        $serviceContainer->registerService('db.ctx', function ($server) {
+            return 'Connecting to ' . $server['host'] . ' via ' . $server['proxy']['host'];
+        }, [['host' => '%database.host%', 'proxy' => ['host' => '%proxy.host%']]]);
+
+        $result = $serviceContainer->loadService('db.ctx');
+        $this->assertEquals('Connecting to my.server.tld via my.proxy.tld', $result);
     }
 
     public function testLoadServiceWithParameterFails()
