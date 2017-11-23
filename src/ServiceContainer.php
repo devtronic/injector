@@ -41,19 +41,19 @@ class ServiceContainer
     /**
      * Register a new service in the container
      *
-     * @param string $name The name of the service
+     * @param string $id The id of the service
      * @param callable $service The service callable
      * @param array $arguments The arguments to create the service
      *
-     * @throws \LogicException If a service with the $name already exists
+     * @throws \LogicException If a service with the $is already exists
      */
-    public function registerService($name, $service, $arguments = [])
+    public function registerService($id, $service, $arguments = [])
     {
-        if (isset($this->services[$name])) {
-            throw new \LogicException("A service with the name {$name} already exist");
+        if ($this->has($id)) {
+            throw new \LogicException("A service with the id {$id} already exist");
         }
 
-        $this->services[$name] = [
+        $this->services[$id] = [
             'service' => $service,
             'arguments' => $arguments
         ];
@@ -61,20 +61,20 @@ class ServiceContainer
 
     /**
      * Unregister a service from the container
-     * @param string $name The name of the service
+     * @param string $id The id of the service
      *
      * @throws ServiceNotFoundException If the service is not registered
      * @throws \LogicException If the service is already loaded
      */
-    public function unregisterService($name)
+    public function unregisterService($id)
     {
-        if (!isset($this->services[$name])) {
-            throw new ServiceNotFoundException("A service with the name {$name} does not exist");
-        } elseif (isset($this->loadedServices[$name])) {
-            throw new \LogicException("The service {$name} can not be unregistered because its already loaded");
+        if (!$this->has($id)) {
+            throw new ServiceNotFoundException("A service with the id {$id} does not exist");
+        } elseif (isset($this->loadedServices[$id])) {
+            throw new \LogicException("The service {$id} can not be unregistered because its already loaded");
         }
 
-        unset($this->services[$name]);
+        unset($this->services[$id]);
     }
 
     /**
@@ -89,18 +89,38 @@ class ServiceContainer
      * @throws \LogicException If the service is no instance of string or callable
      * @throws \InvalidArgumentException If the dependency count does not match the argument count of the service
      * @throws ParameterNotDefinedException If a injected parameter is not defined
+     *
+     * @deprecated since version 1.0.8, to be removed in 1.1.0. Use ServiceContainer::get() instead.
      */
     public function loadService($name)
     {
-        if (!isset($this->services[$name])) {
-            throw new ServiceNotFoundException("A service with the name {$name} does not exist");
+        return $this->get($name);
+    }
+
+    /**
+     * Loads a service and returns the result
+     * Dependencies are also loaded
+     *
+     * @param string $id The id of the Service
+     * @return mixed The load result
+     *
+     * @throws ServiceNotFoundException If the service is not registered
+     * @throws \Exception If the service class is not found
+     * @throws \LogicException If the service is no instance of string or callable
+     * @throws \InvalidArgumentException If the dependency count does not match the argument count of the service
+     * @throws ParameterNotDefinedException If a injected parameter is not defined
+     */
+    public function get($id)
+    {
+        if (!$this->has($id)) {
+            throw new ServiceNotFoundException("A service with the id {$id} does not exist");
         }
 
-        if (isset($this->loadedServices[$name])) {
-            return $this->loadedServices[$name];
+        if (isset($this->loadedServices[$id])) {
+            return $this->loadedServices[$id];
         }
 
-        $service = $this->services[$name]['service'];
+        $service = $this->services[$id]['service'];
         $reflection = null;
         if (is_string($service) && class_exists($service)) {
             $reflectionClass = new \ReflectionClass($service);
@@ -118,7 +138,7 @@ class ServiceContainer
             throw new \LogicException(sprintf($format, gettype($service)));
         }
 
-        $injections = $this->services[$name]['arguments'];
+        $injections = $this->services[$id]['arguments'];
         $parameters = [];
 
         $numGiven = count($injections);
@@ -134,7 +154,7 @@ class ServiceContainer
             foreach ($injections as $injection) {
                 $parameter = $injection;
                 if (is_string($injection) && substr($injection, 0, 1) == '@') {
-                    $parameter = $this->loadService(substr($injection, 1));
+                    $parameter = $this->get(substr($injection, 1));
                 } elseif (is_string($injection) && preg_match_all('~%(.*?)%~', $injection, $matches) > 0) {
                     foreach ($matches[0] as $mKey => $match) {
                         $parameter = str_replace($match, $this->getParameter($matches[1][$mKey]), $parameter);
@@ -145,9 +165,9 @@ class ServiceContainer
                 $parameters[] = $parameter;
             }
         } else {
-            $message = "The Service {$name} expects exact {$minArguments} arguments, {$numGiven} given";
+            $message = "The Service {$id} expects exact {$minArguments} arguments, {$numGiven} given";
             if ($maxArguments != $minArguments) {
-                $message = "The Service {$name} expects min. {$minArguments} and max. {$maxArguments} arguments, {$numGiven} given";
+                $message = "The Service {$id} expects min. {$minArguments} and max. {$maxArguments} arguments, {$numGiven} given";
             }
             throw new \InvalidArgumentException($message);
         }
@@ -159,9 +179,20 @@ class ServiceContainer
         } elseif (is_callable($service)) {
             $loadedService = call_user_func_array($service, $parameters);
         }
-        $this->loadedServices[$name] = &$loadedService;
+        $this->loadedServices[$id] = &$loadedService;
 
         return $loadedService;
+    }
+
+    /**
+     * Checks if a service is registered in the container
+     *
+     * @param string $id The id of the service.
+     * @return bool True if registered, otherwise false.
+     */
+    public function has($id)
+    {
+        return (isset($this->services[$id]) && $this->services[$id] !== null);
     }
 
     /**
@@ -176,8 +207,10 @@ class ServiceContainer
      *
      * @param array $array The dependency array
      * @return array The dependency array with the replaced parameters
+     *
+     * @throws ParameterNotDefinedException If the parameter does not exist
      */
-    public function replaceNestedParameters(array $array)
+    protected function replaceNestedParameters(array $array)
     {
         foreach ($array as $key => $value) {
             if (is_array($value)) {

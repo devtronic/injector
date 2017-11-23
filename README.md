@@ -95,7 +95,7 @@ class Car
 
 $serviceContainer->registerService('app.my_car', Car::class, [250, 'red']);
 
-$myCar = $serviceContainer->loadService('app.my_car');
+$myCar = $serviceContainer->get('app.my_car');
 echo "My Car: Speed: {$myCar->maxSpeed}, Color: {$myCar->color}"; // My Car: Speed: 250, Color: red
 
 ```
@@ -130,7 +130,7 @@ $serviceContainer->registerService('app.my_service', function (array $anotherSer
     return "Name: {$anotherService['name']}, developer: {$anotherService['developer']}";
 }, ['@app.another_service']);
 
-echo $serviceContainer->loadService('app.my_service'); // Name: injector, developer: Julian
+echo $serviceContainer->get('app.my_service'); // Name: injector, developer: Julian
 ```
 
 ### Add Parameters

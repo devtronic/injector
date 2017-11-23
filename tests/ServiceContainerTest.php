@@ -31,7 +31,7 @@ class ServiceContainerTest extends TestCase
         });
 
         $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('A service with the name fail_service already exist');
+        $this->expectExceptionMessage('A service with the id fail_service already exist');
         $serviceContainer->registerService('fail_service', function () {
         });
     }
@@ -59,7 +59,7 @@ class ServiceContainerTest extends TestCase
         $serviceContainer = new ServiceContainer();
 
         $this->expectException(ServiceNotFoundException::class);
-        $this->expectExceptionMessage('A service with the name foobar does not exist');
+        $this->expectExceptionMessage('A service with the id foobar does not exist');
         $serviceContainer->unregisterService('foobar');
     }
 
@@ -69,7 +69,7 @@ class ServiceContainerTest extends TestCase
         $serviceContainer->registerService('foobar', function () {
             return 'baz';
         });
-        $serviceContainer->loadService('foobar');
+        $serviceContainer->get('foobar');
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('The service foobar can not be unregistered because its already loaded');
@@ -98,8 +98,8 @@ class ServiceContainerTest extends TestCase
         $serviceContainer = new ServiceContainer();
 
         $this->expectException(ServiceNotFoundException::class);
-        $this->expectExceptionMessage('A service with the name non_existent_service does not exist');
-        $serviceContainer->loadService('non_existent_service');
+        $this->expectExceptionMessage('A service with the id non_existent_service does not exist');
+        $serviceContainer->get('non_existent_service');
     }
 
     public function testLoadServiceSimple()
@@ -109,7 +109,7 @@ class ServiceContainerTest extends TestCase
             return 'A simple message';
         });
 
-        $message = $serviceContainer->loadService('message');
+        $message = $serviceContainer->get('message');
         $this->assertSame('A simple message', $message);
     }
 
@@ -122,7 +122,7 @@ class ServiceContainerTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('The Service message expects exact 1 arguments, 2 given');
-        $serviceContainer->loadService('message');
+        $serviceContainer->get('message');
     }
 
     public function testLoadServiceWithOptionalDependencyFails()
@@ -134,7 +134,7 @@ class ServiceContainerTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('The Service message expects min. 0 and max. 1 arguments, 2 given');
-        $serviceContainer->loadService('message');
+        $serviceContainer->get('message');
     }
 
     public function testLoadServiceWithStaticDependency()
@@ -145,7 +145,7 @@ class ServiceContainerTest extends TestCase
             return 'Hello, I am a ' . $dependency;
         }, ['static dependency']);
 
-        $message = $serviceContainer->loadService('message');
+        $message = $serviceContainer->get('message');
         $this->assertSame('Hello, I am a static dependency', $message);
     }
 
@@ -160,7 +160,7 @@ class ServiceContainerTest extends TestCase
             return 'Hello, I am a ' . $dependency;
         }, ['@a_dependency']);
 
-        $message = $serviceContainer->loadService('message');
+        $message = $serviceContainer->get('message');
         $this->assertSame('Hello, I am a dependency', $message);
     }
 
@@ -171,7 +171,7 @@ class ServiceContainerTest extends TestCase
             return implode($delimiter, $arrMessages);
         }, [['Hello', 'World'], ', ']);
 
-        $message = $serviceContainer->loadService('messages');
+        $message = $serviceContainer->get('messages');
 
         $this->assertSame('Hello, World', $message);
     }
@@ -187,12 +187,12 @@ class ServiceContainerTest extends TestCase
 
         $this->assertSame([], $serviceContainer->getLoadedServices());
 
-        $myClass = $serviceContainer->loadService('my_object');
+        $myClass = $serviceContainer->get('my_object');
         $this->assertSame('Foobar', $myClass->name);
         $myClass->name = 'Baz';
 
         // Load the service again
-        $myClass = $serviceContainer->loadService('my_object');
+        $myClass = $serviceContainer->get('my_object');
         $this->assertSame('Baz', $myClass->name);
 
         $this->assertEquals([
@@ -206,7 +206,7 @@ class ServiceContainerTest extends TestCase
 
         $serviceContainer->registerService('app.no_constructor', TestClassEmpty::class, []);
 
-        $loaded = $serviceContainer->loadService('app.no_constructor');
+        $loaded = $serviceContainer->get('app.no_constructor');
 
         $this->assertTrue($loaded instanceof TestClassEmpty);
     }
@@ -218,7 +218,7 @@ class ServiceContainerTest extends TestCase
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Service Vendor\\Car not found');
-        $serviceContainer->loadService('app.my_car');
+        $serviceContainer->get('app.my_car');
     }
 
     public function testLoadServiceUnknownTypeFails()
@@ -228,7 +228,7 @@ class ServiceContainerTest extends TestCase
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('The service must be an instance of string, callable, array given.');
-        $serviceContainer->loadService('app.my_car');
+        $serviceContainer->get('app.my_car');
     }
 
     public function testLoadServiceWithFQCN()
@@ -236,7 +236,7 @@ class ServiceContainerTest extends TestCase
         $serviceContainer = new ServiceContainer();
         $serviceContainer->registerService('app.my_car', TestClass::class, [244, 'red']);
 
-        $myCar = $serviceContainer->loadService('app.my_car');
+        $myCar = $serviceContainer->get('app.my_car');
         $this->assertTrue($myCar instanceof TestClass);
         $this->assertSame(244, $myCar->maxSpeed);
         $this->assertSame('red', $myCar->color);
@@ -370,7 +370,7 @@ class ServiceContainerTest extends TestCase
             return 'Connecting to ' . $server;
         }, ['%database.host%:%database.port%']);
 
-        $this->assertEquals('Connecting to my.server.tld:1337', $serviceContainer->loadService('db.ctx'));
+        $this->assertEquals('Connecting to my.server.tld:1337', $serviceContainer->get('db.ctx'));
     }
 
     public function testLoadServiceWithNestedParameter()
@@ -382,7 +382,7 @@ class ServiceContainerTest extends TestCase
             return 'Connecting to ' . $server['host'] . ' via ' . $server['proxy']['host'];
         }, [['host' => '%database.host%', 'proxy' => ['host' => '%proxy.host%']]]);
 
-        $result = $serviceContainer->loadService('db.ctx');
+        $result = $serviceContainer->get('db.ctx');
         $this->assertEquals('Connecting to my.server.tld via my.proxy.tld', $result);
     }
 
@@ -396,6 +396,16 @@ class ServiceContainerTest extends TestCase
 
         $this->expectException(ParameterNotDefinedException::class);
         $this->expectExceptionMessage('A parameter with the name foobar is not defined');
-        $serviceContainer->loadService('app.foo');
+        $serviceContainer->get('app.foo');
+    }
+
+    public function testHas()
+    {
+        $serviceContainer = new ServiceContainer();
+        $serviceContainer->registerService('name.service', function () {
+        }, []);
+
+        $this->assertTrue($serviceContainer->has('name.service'));
+        $this->assertFalse($serviceContainer->has('name.not_exist'));
     }
 }
