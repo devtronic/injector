@@ -10,6 +10,8 @@
 
 namespace Devtronic\Injector\Exception;
 
-class ServiceNotFoundException extends \Exception
+use Psr\Container\NotFoundExceptionInterface;
+
+class ServiceNotFoundException extends \Exception implements NotFoundExceptionInterface
 {
 }

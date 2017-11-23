@@ -12,13 +12,14 @@ namespace Devtronic\Injector;
 
 use Devtronic\Injector\Exception\ParameterNotDefinedException;
 use Devtronic\Injector\Exception\ServiceNotFoundException;
+use Psr\Container\ContainerInterface;
 
 /**
  * A Simple Service Container
  *
  * You can register the services with the registerService-Method
  */
-class ServiceContainer
+class ServiceContainer implements ContainerInterface
 {
     /**
      * Holds the available services
@@ -45,10 +46,46 @@ class ServiceContainer
      * @param callable $service The service callable
      * @param array $arguments The arguments to create the service
      *
-     * @throws \LogicException If a service with the $is already exists
+     * @throws \LogicException If the id is no string or is shorter than one char or
+     *                         if a service with the $id already exists
+     *
+     * @deprecated since version 1.1.0, to be removed in 1.2.0. Use ServiceContainer::register() instead.
      */
     public function registerService($id, $service, $arguments = [])
     {
+        $this->register($id, $service, $arguments);
+    }
+
+    /**
+     * Unregister a service from the container
+     * @param string $id The id of the service
+     *
+     * @throws ServiceNotFoundException If the service is not registered
+     * @throws \LogicException If the service is already loaded
+     *
+     * @deprecated since version 1.1.0, to be removed in 1.2.0. Use ServiceContainer::unregister() instead.
+     */
+    public function unregisterService($id)
+    {
+        $this->unregister($id);
+    }
+
+    /**
+     * Register a new service in the container
+     *
+     * @param string $id The id of the service
+     * @param callable $service The service callable
+     * @param array $arguments The arguments to create the service
+     *
+     * @throws \LogicException If the id is no string or is shorter than one char or
+     *                         if a service with the $id already exists
+     */
+    public function register($id, $service, $arguments = [])
+    {
+        if (!is_string($id) || trim($id) == '') {
+            throw new \LogicException("The id must be an string and with at least one character");
+        }
+
         if ($this->has($id)) {
             throw new \LogicException("A service with the id {$id} already exist");
         }
@@ -66,7 +103,7 @@ class ServiceContainer
      * @throws ServiceNotFoundException If the service is not registered
      * @throws \LogicException If the service is already loaded
      */
-    public function unregisterService($id)
+    public function unregister($id)
     {
         if (!$this->has($id)) {
             throw new ServiceNotFoundException("A service with the id {$id} does not exist");
@@ -81,37 +118,21 @@ class ServiceContainer
      * Loads a service and returns the result
      * Dependencies are also loaded
      *
-     * @param string $name The name of the Service
-     * @return mixed The load result
-     *
-     * @throws ServiceNotFoundException If the service is not registered
-     * @throws \Exception If the service class is not found
-     * @throws \LogicException If the service is no instance of string or callable
-     * @throws \InvalidArgumentException If the dependency count does not match the argument count of the service
-     * @throws ParameterNotDefinedException If a injected parameter is not defined
-     *
-     * @deprecated since version 1.0.8, to be removed in 1.1.0. Use ServiceContainer::get() instead.
-     */
-    public function loadService($name)
-    {
-        return $this->get($name);
-    }
-
-    /**
-     * Loads a service and returns the result
-     * Dependencies are also loaded
-     *
      * @param string $id The id of the Service
      * @return mixed The load result
      *
      * @throws ServiceNotFoundException If the service is not registered
      * @throws \Exception If the service class is not found
-     * @throws \LogicException If the service is no instance of string or callable
+     * @throws \LogicException If the id is no string or the service is no instance of string or callable
      * @throws \InvalidArgumentException If the dependency count does not match the argument count of the service
      * @throws ParameterNotDefinedException If a injected parameter is not defined
      */
     public function get($id)
     {
+        if (!is_string($id)) {
+            throw new \LogicException("The id must be an string");
+        }
+
         if (!$this->has($id)) {
             throw new ServiceNotFoundException("A service with the id {$id} does not exist");
         }

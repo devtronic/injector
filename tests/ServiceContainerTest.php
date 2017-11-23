@@ -14,6 +14,7 @@ use Devtronic\Injector\Exception\ParameterNotDefinedException;
 use Devtronic\Injector\Exception\ServiceNotFoundException;
 use Devtronic\Injector\ServiceContainer;
 use PHPUnit\Framework\TestCase;
+use Psr\Container\ContainerInterface;
 
 class ServiceContainerTest extends TestCase
 {
@@ -21,18 +22,39 @@ class ServiceContainerTest extends TestCase
     {
         $serviceContainer = new ServiceContainer();
 
-        $this->assertTrue($serviceContainer instanceof \Devtronic\Injector\ServiceContainer);
+        $this->assertTrue($serviceContainer instanceof ServiceContainer);
+        $this->assertTrue($serviceContainer instanceof ContainerInterface);
     }
 
     public function testRegisterServiceFails()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('fail_service', function () {
+        $serviceContainer->register('fail_service', function () {
         });
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('A service with the id fail_service already exist');
-        $serviceContainer->registerService('fail_service', function () {
+        $serviceContainer->register('fail_service', function () {
+        });
+    }
+
+    public function testRegisterServiceFailsNoString()
+    {
+        $serviceContainer = new ServiceContainer();
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The id must be an string and with at least one character');
+        $serviceContainer->register(new \StdClass, function () {
+        });
+    }
+
+    public function testRegisterServiceEmptyString()
+    {
+        $serviceContainer = new ServiceContainer();
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The id must be an string and with at least one character');
+        $serviceContainer->register('              ', function () {
         });
     }
 
@@ -43,7 +65,7 @@ class ServiceContainerTest extends TestCase
 
         $service = function () {
         };
-        $serviceContainer->registerService('hello', $service, []);
+        $serviceContainer->register('hello', $service, []);
 
         $expected = [
             'hello' => [
@@ -60,20 +82,20 @@ class ServiceContainerTest extends TestCase
 
         $this->expectException(ServiceNotFoundException::class);
         $this->expectExceptionMessage('A service with the id foobar does not exist');
-        $serviceContainer->unregisterService('foobar');
+        $serviceContainer->unregister('foobar');
     }
 
     public function testUnregisterServiceFailsAlreadyLoaded()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('foobar', function () {
+        $serviceContainer->register('foobar', function () {
             return 'baz';
         });
         $serviceContainer->get('foobar');
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('The service foobar can not be unregistered because its already loaded');
-        $serviceContainer->unregisterService('foobar');
+        $serviceContainer->unregister('foobar');
     }
 
     public function testUnregisterService()
@@ -81,14 +103,14 @@ class ServiceContainerTest extends TestCase
         $serviceContainer = new ServiceContainer();
         $this->assertEquals([], $serviceContainer->getRegisteredServices());
         $this->assertEquals([], $serviceContainer->getLoadedServices());
-        $serviceContainer->registerService('foobar', function () {
+        $serviceContainer->register('foobar', function () {
             return 'baz';
         });
 
         $this->assertCount(1, $serviceContainer->getRegisteredServices());
         $this->assertCount(0, $serviceContainer->getLoadedServices());
 
-        $serviceContainer->unregisterService('foobar');
+        $serviceContainer->unregister('foobar');
         $this->assertCount(0, $serviceContainer->getRegisteredServices());
         $this->assertCount(0, $serviceContainer->getLoadedServices());
     }
@@ -102,10 +124,19 @@ class ServiceContainerTest extends TestCase
         $serviceContainer->get('non_existent_service');
     }
 
+    public function testLoadServiceFailsNoString()
+    {
+        $serviceContainer = new ServiceContainer();
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('The id must be an string');
+        $serviceContainer->get(new \stdClass());
+    }
+
     public function testLoadServiceSimple()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('message', function () {
+        $serviceContainer->register('message', function () {
             return 'A simple message';
         });
 
@@ -117,7 +148,7 @@ class ServiceContainerTest extends TestCase
     {
         $serviceContainer = new ServiceContainer();
 
-        $serviceContainer->registerService('message', function ($dependency) {
+        $serviceContainer->register('message', function ($dependency) {
         }, ['one', 'two']);
 
         $this->expectException(\InvalidArgumentException::class);
@@ -129,7 +160,7 @@ class ServiceContainerTest extends TestCase
     {
         $serviceContainer = new ServiceContainer();
 
-        $serviceContainer->registerService('message', function ($dependency = false) {
+        $serviceContainer->register('message', function ($dependency = false) {
         }, ['one', 'two']);
 
         $this->expectException(\InvalidArgumentException::class);
@@ -141,7 +172,7 @@ class ServiceContainerTest extends TestCase
     {
         $serviceContainer = new ServiceContainer();
 
-        $serviceContainer->registerService('message', function ($dependency) {
+        $serviceContainer->register('message', function ($dependency) {
             return 'Hello, I am a ' . $dependency;
         }, ['static dependency']);
 
@@ -152,11 +183,11 @@ class ServiceContainerTest extends TestCase
     public function testLoadServiceWithServiceDependency()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('a_dependency', function () {
+        $serviceContainer->register('a_dependency', function () {
             return 'dependency';
         });
 
-        $serviceContainer->registerService('message', function ($dependency) {
+        $serviceContainer->register('message', function ($dependency) {
             return 'Hello, I am a ' . $dependency;
         }, ['@a_dependency']);
 
@@ -167,7 +198,7 @@ class ServiceContainerTest extends TestCase
     public function testLoadServiceWithStaticDependencyArray()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('messages', function ($arrMessages, $delimiter = ';') {
+        $serviceContainer->register('messages', function ($arrMessages, $delimiter = ';') {
             return implode($delimiter, $arrMessages);
         }, [['Hello', 'World'], ', ']);
 
@@ -179,7 +210,7 @@ class ServiceContainerTest extends TestCase
     public function testLoadAlreadyLoadedService()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('my_object', function () {
+        $serviceContainer->register('my_object', function () {
             $cls = new \stdClass();
             $cls->name = 'Foobar';
             return $cls;
@@ -204,7 +235,7 @@ class ServiceContainerTest extends TestCase
     {
         $serviceContainer = new ServiceContainer();
 
-        $serviceContainer->registerService('app.no_constructor', TestClassEmpty::class, []);
+        $serviceContainer->register('app.no_constructor', TestClassEmpty::class, []);
 
         $loaded = $serviceContainer->get('app.no_constructor');
 
@@ -214,7 +245,7 @@ class ServiceContainerTest extends TestCase
     public function testLoadServiceWithFQCNFails()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('app.my_car', 'Vendor\\Car', [244, 'red']);
+        $serviceContainer->register('app.my_car', 'Vendor\\Car', [244, 'red']);
 
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Service Vendor\\Car not found');
@@ -224,7 +255,7 @@ class ServiceContainerTest extends TestCase
     public function testLoadServiceUnknownTypeFails()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('app.my_car', [], [244, 'red']);
+        $serviceContainer->register('app.my_car', [], [244, 'red']);
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('The service must be an instance of string, callable, array given.');
@@ -234,7 +265,7 @@ class ServiceContainerTest extends TestCase
     public function testLoadServiceWithFQCN()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('app.my_car', TestClass::class, [244, 'red']);
+        $serviceContainer->register('app.my_car', TestClass::class, [244, 'red']);
 
         $myCar = $serviceContainer->get('app.my_car');
         $this->assertTrue($myCar instanceof TestClass);
@@ -366,7 +397,7 @@ class ServiceContainerTest extends TestCase
         $serviceContainer = new ServiceContainer();
         $serviceContainer->addParameter('database.host', 'my.server.tld');
         $serviceContainer->addParameter('database.port', '1337');
-        $serviceContainer->registerService('db.ctx', function ($server) {
+        $serviceContainer->register('db.ctx', function ($server) {
             return 'Connecting to ' . $server;
         }, ['%database.host%:%database.port%']);
 
@@ -378,7 +409,7 @@ class ServiceContainerTest extends TestCase
         $serviceContainer = new ServiceContainer();
         $serviceContainer->addParameter('database.host', 'my.server.tld');
         $serviceContainer->addParameter('proxy.host', 'my.proxy.tld');
-        $serviceContainer->registerService('db.ctx', function ($server) {
+        $serviceContainer->register('db.ctx', function ($server) {
             return 'Connecting to ' . $server['host'] . ' via ' . $server['proxy']['host'];
         }, [['host' => '%database.host%', 'proxy' => ['host' => '%proxy.host%']]]);
 
@@ -389,7 +420,7 @@ class ServiceContainerTest extends TestCase
     public function testLoadServiceWithParameterFails()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('app.foo', function ($db) {
+        $serviceContainer->register('app.foo', function ($db) {
             return $db;
         }, ['%foobar%']);
 
@@ -402,7 +433,7 @@ class ServiceContainerTest extends TestCase
     public function testHas()
     {
         $serviceContainer = new ServiceContainer();
-        $serviceContainer->registerService('name.service', function () {
+        $serviceContainer->register('name.service', function () {
         }, []);
 
         $this->assertTrue($serviceContainer->has('name.service'));

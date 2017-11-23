@@ -10,6 +10,8 @@
 
 namespace Devtronic\Injector\Exception;
 
-class ParameterNotDefinedException extends \Exception
+use Psr\Container\NotFoundExceptionInterface;
+
+class ParameterNotDefinedException extends \Exception implements NotFoundExceptionInterface
 {
 }
