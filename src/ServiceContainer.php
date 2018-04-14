@@ -2,7 +2,7 @@
 /**
  * This file is part of the Devtronic Injector package.
  *
- * Copyright 2017 by Julian Finkler <julian@developer-heaven.de>
+ * Copyright 2017-2018 by Julian Finkler <julian@developer-heaven.de>
  *
  * For the full copyright and license information, please read the LICENSE
  * file that was distributed with this source code.
@@ -38,37 +38,6 @@ class ServiceContainer implements ContainerInterface
      * @var array
      */
     protected $parameters = [];
-
-    /**
-     * Register a new service in the container
-     *
-     * @param string $id The id of the service
-     * @param callable $service The service callable
-     * @param array $arguments The arguments to create the service
-     *
-     * @throws \LogicException If the id is no string or is shorter than one char or
-     *                         if a service with the $id already exists
-     *
-     * @deprecated since version 1.1.0, to be removed in 1.2.0. Use ServiceContainer::register() instead.
-     */
-    public function registerService($id, $service, $arguments = [])
-    {
-        $this->register($id, $service, $arguments);
-    }
-
-    /**
-     * Unregister a service from the container
-     * @param string $id The id of the service
-     *
-     * @throws ServiceNotFoundException If the service is not registered
-     * @throws \LogicException If the service is already loaded
-     *
-     * @deprecated since version 1.1.0, to be removed in 1.2.0. Use ServiceContainer::unregister() instead.
-     */
-    public function unregisterService($id)
-    {
-        $this->unregister($id);
-    }
 
     /**
      * Register a new service in the container
@@ -171,26 +140,26 @@ class ServiceContainer implements ContainerInterface
             }
         }
 
-        if ($numGiven >= $minArguments && $numGiven <= $maxArguments) {
-            foreach ($injections as $injection) {
-                $parameter = $injection;
-                if (is_string($injection) && substr($injection, 0, 1) == '@') {
-                    $parameter = $this->get(substr($injection, 1));
-                } elseif (is_string($injection) && preg_match_all('~%(.*?)%~', $injection, $matches) > 0) {
-                    foreach ($matches[0] as $mKey => $match) {
-                        $parameter = str_replace($match, $this->getParameter($matches[1][$mKey]), $parameter);
-                    }
-                } elseif (is_array($parameter)) {
-                    $parameter = $this->replaceNestedParameters($parameter);
-                }
-                $parameters[] = $parameter;
-            }
-        } else {
+        if ($numGiven < $minArguments || $numGiven > $maxArguments) {
             $message = "The Service {$id} expects exact {$minArguments} arguments, {$numGiven} given";
             if ($maxArguments != $minArguments) {
                 $message = "The Service {$id} expects min. {$minArguments} and max. {$maxArguments} arguments, {$numGiven} given";
             }
             throw new \InvalidArgumentException($message);
+        }
+
+        foreach ($injections as $injection) {
+            $parameter = $injection;
+            if (is_string($injection) && substr($injection, 0, 1) == '@') {
+                $parameter = $this->get(substr($injection, 1));
+            } elseif (is_string($injection) && preg_match_all('~%(.*?)%~', $injection, $matches) > 0) {
+                foreach ($matches[0] as $mKey => $match) {
+                    $parameter = str_replace($match, $this->getParameter($matches[1][$mKey]), $parameter);
+                }
+            } elseif (is_array($parameter)) {
+                $parameter = $this->replaceNestedParameters($parameter);
+            }
+            $parameters[] = $parameter;
         }
 
         $loadedService = null;
