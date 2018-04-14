@@ -17,9 +17,9 @@ $ composer require devtronic/injector
 ## Usage
 
 ### Register Services
-To register a service you have to call the `registerService`-method.  
+To register a service you have to call the `register`-method.  
 ```
-ServiceContainer::registerService($name, $service, $arguments = [])
+ServiceContainer::register($name, $service, $arguments = [])
 ```
 |  Parameter | Description                                                                    | Example              |
 |:-----------|:-------------------------------------------------------------------------------|:---------------------|
@@ -37,7 +37,7 @@ use Devtronic\Injector\ServiceContainer;
 
 $serviceContainer = new ServiceContainer();
 
-$serviceContainer->registerService('app.my_service', function ($name) {
+$serviceContainer->register('app.my_service', function ($name) {
   return 'Hello ' . $name;
 }, ['Your Name']);
 
@@ -56,14 +56,14 @@ use Devtronic\Injector\ServiceContainer;
 
 $serviceContainer = new ServiceContainer();
 
-$serviceContainer->registerService('app.another_service', function () {
+$serviceContainer->register('app.another_service', function () {
     return [
         'name' => 'injector',
         'developer' => 'Julian',
     ];
 });
 
-$serviceContainer->registerService('app.my_service', function (array $anotherService) {
+$serviceContainer->register('app.my_service', function (array $anotherService) {
     return "Name: {$anotherService['name']}, developer: {$anotherService['developer']}";
 }, ['@app.another_service']);
 ```
@@ -93,7 +93,7 @@ class Car
     }
 }
 
-$serviceContainer->registerService('app.my_car', Car::class, [250, 'red']);
+$serviceContainer->register('app.my_car', Car::class, [250, 'red']);
 
 $myCar = $serviceContainer->get('app.my_car');
 echo "My Car: Speed: {$myCar->maxSpeed}, Color: {$myCar->color}"; // My Car: Speed: 250, Color: red
@@ -119,14 +119,14 @@ use Devtronic\Injector\ServiceContainer;
 
 $serviceContainer = new ServiceContainer();
 
-$serviceContainer->registerService('app.another_service', function () {
+$serviceContainer->register('app.another_service', function () {
     return [
         'name' => 'injector',
         'developer' => 'Julian',
     ];
 });
 
-$serviceContainer->registerService('app.my_service', function (array $anotherService) {
+$serviceContainer->register('app.my_service', function (array $anotherService) {
     return "Name: {$anotherService['name']}, developer: {$anotherService['developer']}";
 }, ['@app.another_service']);
 
@@ -152,7 +152,7 @@ use Devtronic\Injector\ServiceContainer;
 $serviceContainer = new ServiceContainer();
 
 $serviceContainer->addParameter('database.host', 'localhost');
-$serviceContainer->registerService('my.service', function ($hostname) {
+$serviceContainer->register('my.service', function ($hostname) {
     return 'Connecting to ' . $hostname;
 }, ['%database.host%']);
 ```
